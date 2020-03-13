@@ -57,7 +57,7 @@ class BaseOptions():
         g_sample = parser.add_argument_group('Sampling')
         g_sample.add_argument('--sigma', type=float, default=5.0, help='perturbation standard deviation for positions')
 
-        g_sample.add_argument('--num_sample_inout', type=int, default=5000, help='# of sampling points')
+        g_sample.add_argument('--num_sample_inout', type=int, default=0, help='# of sampling points')
         g_sample.add_argument('--num_sample_color', type=int, default=0, help='# of sampling points')
 
         g_sample.add_argument('--z_size', type=float, default=200.0, help='z normalization factor')
