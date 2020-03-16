@@ -12,6 +12,9 @@ import cv2
 from PIL import Image
 from tqdm import tqdm
 
+def reshape_to_min_channel2(tensor1, tensor2):
+    min_channel2 = min(tensor1.shape[2], tensor2.shape[2])
+    return tensor1[:,:,:min_channel2,:], tensor2[:,:,:min_channel2,:]
 
 def reshape_multiview_tensors(image_tensor, calib_tensor):
     # Careful here! Because we put single view and multiview together,

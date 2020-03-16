@@ -45,6 +45,7 @@ class ResBlkPIFuNet(BasePIFuNet):
         self.im_feat = self.image_filter(images)
 
     def attach(self, im_feat):
+        im_feat, self.im_feat = reshape_to_min_channel2(im_feat, self.im_feat)
         self.im_feat = torch.cat([im_feat, self.im_feat], 1)
 
     def query(self, points, calibs, transforms=None, labels=None):

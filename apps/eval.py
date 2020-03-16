@@ -7,6 +7,7 @@ ROOT_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 import time
 import json
 import numpy as np
+from numba import cuda as cuda_device
 import torch
 from torch.utils.data import DataLoader
 
@@ -15,6 +16,7 @@ from lib.mesh_util import *
 from lib.sample_util import *
 from lib.train_util import *
 from lib.model import *
+from lib_tf.preprocess import Preprocess
 
 from PIL import Image
 import torchvision.transforms as transforms
@@ -23,6 +25,7 @@ import tqdm
 
 # get options
 opt = BaseOptions().parse()
+# print(opt)
 
 class Evaluator:
     def __init__(self, opt, projection_mode='orthogonal'):
@@ -35,6 +38,8 @@ class Evaluator:
         ])
         # set cuda
         cuda = torch.device('cuda:%d' % opt.gpu_id) if torch.cuda.is_available() else torch.device('cpu')
+        # cuda = torch.device('cpu')
+        # cuda = torch.device('cuda:%d' % 1) if torch.cuda.is_available() else torch.device('cpu')
 
         # create net
         netG = HGPIFuNet(opt, projection_mode).to(device=cuda)
@@ -61,21 +66,24 @@ class Evaluator:
         self.netG = netG
         self.netC = netC
 
-    def load_image(self, image_path, mask_path):
+    def load_image(self, img_name, image, mask):
         # Name
-        img_name = os.path.splitext(os.path.basename(image_path))[0]
+        # img_name = os.path.splitext(os.path.basename(image_path))[0]
         # Calib
         B_MIN = np.array([-1, -1, -1])
         B_MAX = np.array([1, 1, 1])
         projection_matrix = np.identity(4)
         projection_matrix[1, 1] = -1
         calib = torch.Tensor(projection_matrix).float()
+
+        # original_image = Image.open(image_path)
+        # image, mask = preprocess_image(original_image)
         # Mask
-        mask = Image.open(mask_path).convert('L')
+        mask = mask.convert('L')
         mask = transforms.Resize(self.load_size)(mask)
         mask = transforms.ToTensor()(mask).float()
         # image
-        image = Image.open(image_path).convert('RGB')
+        image = image.convert('RGB')
         image = self.to_tensor(image)
         image = mask.expand_as(image) * image
         return {
@@ -106,18 +114,22 @@ class Evaluator:
 
 
 if __name__ == '__main__':
-    evaluator = Evaluator(opt)
-
-    test_images = glob.glob(os.path.join(opt.test_folder_path, '*'))
-    test_images = [f for f in test_images if ('png' in f or 'jpg' in f) and (not 'mask' in f)]
-    test_masks = [f[:-4]+'_mask.png' for f in test_images]
-
-    print("num; ", len(test_masks))
-
-    for image_path, mask_path in tqdm.tqdm(zip(test_images, test_masks)):
+    preprocess = Preprocess(opt.graph_def_dir)
+    test_image_paths = glob.glob(os.path.join(opt.test_folder_path, '*'))
+    test_image_paths = [f for f in test_image_paths if ('png' in f or 'jpg' in f) and (not 'mask' in f)]
+    image_masks = []
+    for image_path in test_image_paths:
         try:
-            print(image_path, mask_path)
-            data = evaluator.load_image(image_path, mask_path)
-            evaluator.eval(data, True)
+            original_image = Image.open(image_path)
+            image_masks.append(preprocess.preprocess_image(original_image))
         except Exception as e:
            print("error:", e.args)
+    del preprocess
+    cur_device = cuda_device.get_current_device()
+    cur_device.reset()
+
+    evaluator = Evaluator(opt)
+    for i in range(len(test_image_paths)):
+        img_name = os.path.splitext(os.path.basename(test_image_paths[i]))[0]
+        data = evaluator.load_image(img_name, image_masks[i][0], image_masks[i][1])
+        evaluator.eval(data, True)

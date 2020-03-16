@@ -67,7 +67,7 @@ class BaseOptions():
         # General
         g_model.add_argument('--norm', type=str, default='group',
                              help='instance normalization or batch normalization or group normalization')
-        g_model.add_argument('--norm_color', type=str, default='instance',
+        g_model.add_argument('--norm_color', type=str, default='group',
                              help='instance normalization or batch normalization or group normalization')
 
         # hg filter specify
@@ -112,6 +112,7 @@ class BaseOptions():
         parser.add_argument('--results_path', type=str, default='./results', help='path to save results ply')
         parser.add_argument('--load_checkpoint_path', type=str, help='path to save results ply')
         parser.add_argument('--single', type=str, default='', help='single data for training')
+        parser.add_argument('--graph_def_dir', type=str, default='./lib_tf', help='dir that tensorflow pretrained model for segmentation exists')
         # for single image reconstruction
         parser.add_argument('--mask_path', type=str, help='path for input mask')
         parser.add_argument('--img_path', type=str, help='path for input image')
